@@ -1,0 +1,23 @@
+# MCP Server
+fastmcp>=2.0.0
+
+# Agent Framework - Multiple LLM Support
+anthropic>=0.40.0
+openai>=1.0.0
+mcp>=1.2.0
+
+# UI Framework
+streamlit>=1.30.0
+
+# Utilities
+python-dotenv>=1.0.0
+pydantic>=2.0.0
+httpx>=0.27.0
+
+# Infoblox Integration
+requests>=2.31.0
+
+# Web Server
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+websockets>=12.0

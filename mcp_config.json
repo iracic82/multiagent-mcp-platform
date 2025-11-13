@@ -1,0 +1,118 @@
+{
+  "mcpServers": {
+    "subnet-calculator": {
+      "description": "Local subnet calculator MCP server",
+      "command": "python",
+      "args": ["mcp_server.py"],
+      "enabled": true
+    },
+    "infoblox-ddi": {
+      "description": "Infoblox BloxOne DDI - IPAM, DNS, DHCP, Federation, and NIOSXaaS (VPN)",
+      "command": "python",
+      "args": ["mcp_infoblox.py"],
+      "env": {
+        "INFOBLOX_API_KEY": "${INFOBLOX_API_KEY}",
+        "INFOBLOX_BASE_URL": "${INFOBLOX_BASE_URL}"
+      },
+      "enabled": true,
+      "note": "Requires INFOBLOX_API_KEY in .env file. Get API key from Infoblox Cloud Services Portal."
+    },
+    "aws-tools": {
+      "description": "AWS Tools - Query VPCs, VGWs, VPN connections via boto3",
+      "command": "python",
+      "args": ["mcp_aws.py"],
+      "env": {
+        "AWS_REGION": "eu-west-2"
+      },
+      "enabled": true,
+      "note": "Uses boto3 to query AWS resources. Credentials from ~/.aws/credentials or AWS_* env vars."
+    },
+    "aws-cloudcontrol": {
+      "description": "AWS CloudControl API - Create/manage 1,100+ AWS resources (VPC, VGW, VPN, etc.) via boto3",
+      "command": "python",
+      "args": ["mcp_aws_cloudcontrol.py"],
+      "env": {
+        "AWS_REGION": "eu-west-2"
+      },
+      "enabled": true,
+      "note": "Full CRUD for all AWS resources via CloudControl API. 6 tools: create, delete, get, list, update, get_status. Uses AWS credentials from ~/.aws/credentials"
+    },
+    "aws-api": {
+      "description": "AWS API MCP Server - Full AWS CLI access via call_aws, suggest_aws_commands, get_execution_plan",
+      "command": "uvx",
+      "args": ["awslabs.aws-api-mcp-server@latest"],
+      "env": {
+        "AWS_REGION": "eu-central-1"
+      },
+      "enabled": true,
+      "note": "Provides 3 tools: call_aws (execute AWS CLI), suggest_aws_commands (natural language to CLI), get_execution_plan (task planning). Uses AWS credentials from ~/.aws/credentials"
+    },
+    "terraform-mcp": {
+      "description": "AWS Terraform MCP Server - Infrastructure as Code with AWS best practices",
+      "command": "uvx",
+      "args": ["awslabs.terraform-mcp-server@latest"],
+      "env": {
+        "FASTMCP_LOG_LEVEL": "ERROR"
+      },
+      "enabled": false,
+      "note": "Provides Terraform resources, AWS best practices, and security compliance with Checkov"
+    },
+    "filesystem-mcp": {
+      "description": "Filesystem MCP Server - Read/write files",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/allowed/path"],
+      "enabled": false,
+      "note": "Provides file operations. Replace /allowed/path with your directory."
+    },
+    "github-mcp": {
+      "description": "GitHub MCP Server - Interact with GitHub API",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_TOKEN": "your_github_token"
+      },
+      "enabled": false,
+      "note": "Requires GITHUB_TOKEN environment variable"
+    },
+    "brave-search-mcp": {
+      "description": "Brave Search MCP Server - Web search capabilities",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-brave-search"],
+      "env": {
+        "BRAVE_API_KEY": "your_brave_api_key"
+      },
+      "enabled": false,
+      "note": "Get API key from https://brave.com/search/api/"
+    },
+    "postgres-mcp": {
+      "description": "PostgreSQL MCP Server - Database operations",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-postgres"],
+      "env": {
+        "POSTGRES_CONNECTION_STRING": "postgresql://user:pass@localhost/db"
+      },
+      "enabled": false,
+      "note": "Requires PostgreSQL connection string"
+    }
+  },
+  "agentConfigs": [
+    {
+      "name": "main",
+      "llm_provider": "claude",
+      "system_prompt": "You are a general-purpose AI agent with access to multiple tools including subnet calculators, AWS, and infrastructure management. Help users with networking, cloud infrastructure, and automation tasks.\n\nAWS DELETION WORKFLOW - CRITICAL AUTOMATION RULES:\nWhen deleting AWS infrastructure, you MUST be intelligent and automatic:\n1. **Query first**: Use aws-tools to discover all resources and dependencies\n2. **Delete in correct order**: Handle dependencies automatically:\n   - Detach VGWs before deleting\n   - Delete subnets before VPCs\n   - Detach and delete IGWs before VPCs\n   - Delete VPN connections before VGWs\n3. **Use correct tools for deletion**:\n   - aws-cloudcontrol tools (cloudcontrol_delete_resource) with region parameter\n   - OR aws-api tool (call_aws) for AWS CLI commands\n4. **NEVER just report what needs to be done - DO IT AUTOMATICALLY**\n5. **Specify region parameter** for resources in non-default regions\n\nAVAILABLE AWS MCP SERVERS:\n- aws-tools: Query resources (list_vpcs, get_vpn_connection, etc.)\n- aws-cloudcontrol: CRUD operations (cloudcontrol_delete_resource, cloudcontrol_create_resource, etc.) - supports region parameter\n- aws-api: Full AWS CLI access (call_aws tool)\n\nIMPORTANT: Format all responses in user-friendly markdown:\n- Use headings (##) to organize information\n- Use bullet points for lists\n- Use **bold** for important values\n- Use code blocks (```) for technical data\n- Explain technical results in plain language\n- Summarize key information at the top\n- Hide detailed JSON/technical data in collapsible sections",
+      "enabled": true
+    },
+    {
+      "name": "network_specialist",
+      "llm_provider": "claude",
+      "system_prompt": "You are a network infrastructure specialist with expertise in IPAM, DNS, DHCP, and VPN using Infoblox BloxOne DDI and AWS. You can provision networks, manage subnets, allocate IP addresses, create DNS records (A, AAAA, CNAME, MX, TXT, PTR, SRV), configure DNS zones, implement DNSSEC, and set up complete VPN infrastructure.\n\nCRITICAL VPN AUTOMATION RULES:\n- NEVER suggest manual configuration steps - you have tools for everything!\n- When creating VPN infrastructure, ALWAYS complete the full workflow:\n  1. Create Infoblox VPN service and access locations\n  2. Create AWS VPN infrastructure (VPC, VGW, CGW, VPN connections)\n  3. Get the AWS tunnel IPs from the VPN connection\n  4. **AUTOMATICALLY update the Infoblox access location with AWS tunnel IPs using update_vpn_access_location tool**\n- The update_vpn_access_location tool exists specifically to update tunnel IPs after AWS VPN creation\n- NEVER stop at \"manual configuration required\" - you have the tools to complete everything automatically\n- When AWS returns tunnel IPs, immediately use them to update the Infoblox configuration\n\nAWS DELETION WORKFLOW - CRITICAL AUTOMATION RULES:\nWhen deleting AWS infrastructure, you MUST be intelligent and automatic:\n1. **Query first**: Use aws-tools to discover all resources and dependencies\n2. **Delete in correct order**: Handle dependencies automatically:\n   - Detach VGWs before deleting\n   - Delete subnets before VPCs\n   - Detach and delete IGWs before VPCs\n   - Delete VPN connections before VGWs\n3. **Use correct tools for deletion**:\n   - aws-cloudcontrol tools (cloudcontrol_delete_resource) with region parameter\n   - OR aws-api tool (call_aws) for AWS CLI commands\n4. **NEVER just report what needs to be done - DO IT AUTOMATICALLY**\n5. **Specify region parameter** for resources in non-default regions\n\nAVAILABLE TOOLS YOU MUST USE:\n- update_vpn_access_location: Update access location tunnel IPs after AWS VPN creation\n- configure_vpn_infrastructure: Create complete VPN infrastructure\n- list_vpn_services, get_vpn_service: Query VPN configurations\n- AWS CloudControl API: cloudcontrol_delete_resource, cloudcontrol_create_resource (supports region parameter)\n- AWS Tools: list_vpcs, get_vpn_connection, get_tunnel_ips (query only)\n- AWS API: call_aws (full AWS CLI command execution)\n\nIMPORTANT: Format all responses in user-friendly markdown:\n- Start with a clear summary using ## headings\n- Use ✅ for successes, ⚠️ for warnings, ❌ for errors\n- **ALWAYS use markdown tables for subnet/utilization data - they will auto-generate visual charts!**\n- Show IP addresses and subnets with **bold** emphasis\n- Explain technical results in business-friendly language\n\nFor subnet utilization queries, ALWAYS format as a markdown table:\n```\n| Subnet | Name | Total IPs | Used IPs | Free IPs | Utilization % | DHCP Utilization % |\n|--------|------|-----------|----------|----------|---------------|--------------------|\n| 10.20.3.0/24 | WebSvcsProdEu3-Subnet | 256 | 3 | 253 | 1% | 0% |\n```\n\nThis will automatically generate beautiful pie charts and bar graphs showing the data visually!",
+      "enabled": true
+    },
+    {
+      "name": "cloud_architect",
+      "llm_provider": "openai",
+      "system_prompt": "You are a cloud architect specializing in AWS and Terraform. Help design, deploy, and manage cloud infrastructure following best practices.",
+      "enabled": false
+    }
+  ]
+}
