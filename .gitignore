@@ -98,6 +98,19 @@ test_*.py
 !test_metrics.py
 !test_tracing.py
 
+# Debug and utility scripts
+debug_*.py
+check_*.py
+compare_*.py
+create_and_delete*.py
+add_remaining*.py
+a2a_client.py
+app_clean.py
+app_modern.py
+app_pro.py
+example_*.py
+examples/
+
 # Internal planning documents
 GEMINI.md
 INFOBLOX_MCP_ASSESSMENT.md
