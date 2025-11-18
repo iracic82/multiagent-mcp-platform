@@ -18,7 +18,7 @@ app = FastAPI(title="Velocity Agent API")
 # CORS middleware for Next.js frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3006", "http://localhost:3000"],  # Next.js ports
+    allow_origins=["*"],  # Allow all origins in development
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -52,16 +52,18 @@ async def startup_event():
             if "url" in server_config:
                 mcp_servers.append({"name": name, "url": server_config["url"]})
             else:
-                # Assume stdio MCP server
+                # Try HTTP first (spec-compliant), fallback to SSE (deprecated)
+                # HTTP servers on ports 4001-4004/mcp (new)
+                # SSE servers on ports 3001-3004/sse (backup)
                 port_map = {
-                    "subnet-calculator": 3002,
-                    "infoblox-ddi": 3001,
-                    "aws-tools": 3003,
-                    "aws-cloudcontrol": 3004
+                    "subnet-calculator": 4002,
+                    "infoblox-ddi": 4001,
+                    "aws-tools": 4003,
+                    "aws-cloudcontrol": 4004
                 }
-                port = port_map.get(name, 3000)
-                # FastMCP servers use /sse endpoint
-                mcp_servers.append({"name": name, "url": f"http://127.0.0.1:{port}/sse"})
+                port = port_map.get(name, 4000)
+                # FastMCP HTTP servers use /mcp endpoint
+                mcp_servers.append({"name": name, "url": f"http://127.0.0.1:{port}/mcp"})
 
     agent_configs = config.get("agentConfigs", [])
     enabled_agents = [a for a in agent_configs if a.get("enabled", True)]

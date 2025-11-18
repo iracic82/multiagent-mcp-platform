@@ -44,8 +44,8 @@
       "env": {
         "AWS_REGION": "eu-central-1"
       },
-      "enabled": true,
-      "note": "Provides 3 tools: call_aws (execute AWS CLI), suggest_aws_commands (natural language to CLI), get_execution_plan (task planning). Uses AWS credentials from ~/.aws/credentials"
+      "enabled": false,
+      "note": "Provides 3 tools: call_aws (execute AWS CLI), suggest_aws_commands (natural language to CLI), get_execution_plan (task planning). Uses AWS credentials from ~/.aws/credentials. NOTE: External Node.js server, not migrated to HTTP transport yet."
     },
     "terraform-mcp": {
       "description": "AWS Terraform MCP Server - Infrastructure as Code with AWS best practices",

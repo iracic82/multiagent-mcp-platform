@@ -39,7 +39,8 @@ This multi-agent platform exposes **48+ enterprise-grade tools** for managing In
 
 **Scalability**
 - Multi-tenant architecture with concurrent client support
-- SSE (Server-Sent Events) transport for real-time communication
+- HTTP streamable transport (MCP spec-compliant, protocol 2025-06-18)
+- SSE (Server-Sent Events) transport available as backup
 - Connection pooling and resource optimization
 - Modular service client design for horizontal scaling
 
@@ -74,15 +75,25 @@ cp .env.example .env
 # Edit .env and add your INFOBLOX_API_KEY
 ```
 
-### Running the MCP Server
+### Running the MCP Servers
 
 ```bash
-# Standalone mode (SSE transport on port 3001)
-python mcp_infoblox.py
+# Start all HTTP MCP servers (recommended - spec-compliant)
+./start_http_servers.sh
+
+# Or start individual servers:
+python mcp_infoblox_http.py    # Port 4001/mcp (HTTP)
+python mcp_server_http.py      # Port 4002/mcp (HTTP)
+python mcp_aws_http.py          # Port 4003/mcp (HTTP)
+python mcp_aws_cloudcontrol_http.py  # Port 4004/mcp (HTTP)
+
+# Legacy SSE transport (backup):
+python mcp_infoblox.py  # Port 3001/sse (SSE - deprecated)
 ```
 
-The server exposes three endpoints:
-- **SSE endpoint**: `http://localhost:3001/sse` (for MCP clients)
+The servers expose these endpoints:
+- **HTTP endpoint**: `http://localhost:4001/mcp` (spec-compliant)
+- **SSE endpoint**: `http://localhost:3001/sse` (backup/legacy)
 - **Metrics endpoint**: `http://localhost:8001/metrics` (for Prometheus)
 - **Health endpoint**: `http://localhost:8001/health` (for load balancers)
 
