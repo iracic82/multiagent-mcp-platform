@@ -62,21 +62,22 @@
 │       │                    │                        │                       │
 │  ┌────▼────────────────────▼────────────────────────▼────────────────┐     │
 │  │                MCP Client (Singleton)                              │     │
-│  │                - Maintains SSE connections to MCP servers          │     │
+│  │                - HTTP streamable transport (MCP 2025-06-18)        │     │
 │  │                - Multiplexes tool calls from all agents            │     │
 │  │                - Handles tool discovery and schema                 │     │
-│  │                - 50 total tools from 2 servers (+ Terraform MCP)   │     │
-│  └────┬─────────────────────────────┬─────────────────────────────────┘     │
-│       │                             │                                       │
-│       │                             │                                       │
-└───────┼─────────────────────────────┼───────────────────────────────────────┘
-        │                             │
-        │ SSE                         │ SSE
-        │                             │
-┌───────▼──────────────┐  ┌───────────▼────────────────────────────────────┐
-│  MCP Server          │  │  MCP Server                                    │
-│  Subnet Calculator   │  │  Infoblox BloxOne DDI + NIOSXaaS + Atcfw       │
-│  (Port 3002)         │  │  (Port 3001)                                   │
+│  │                - 133 tools from 4 servers (SSE backup available)   │     │
+│  └────┬─────────────────┬─────────────────┬──────────────────────────┬────┘
+│       │                 │                 │                          │
+│       │                 │                 │                          │
+└───────┼─────────────────┼─────────────────┼──────────────────────────┼────┘
+        │                 │                 │                          │
+        │ HTTP            │ HTTP            │ HTTP                     │ HTTP
+        │                 │                 │                          │
+┌───────▼──────┐ ┌────────▼───────┐ ┌───────▼────────┐ ┌─────────────▼─────┐
+│  MCP Server  │ │  MCP Server    │ │  MCP Server    │ │  MCP Server       │
+│  Infoblox    │ │  Subnet Calc   │ │  AWS Tools     │ │  AWS CloudControl │
+│  (4001/mcp)  │ │  (4002/mcp)    │ │  (4003/mcp)    │ │  (4004/mcp)       │
+│  (3001/sse)  │ │  (3002/sse)    │ │  (3003/sse)    │ │  (3004/sse)       │
 │                      │  │                                                │
 │  Tools: 2            │  │  Tools: 48                                     │
 │  - calculate_subnet  │  │                                                │
