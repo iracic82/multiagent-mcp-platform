@@ -49,11 +49,12 @@ Complete list of all software, libraries, frameworks, and tools used to build th
 ### MCP Server Framework
 - **FastMCP 2.0.0+**
   - Python framework for building MCP servers
-  - SSE (Server-Sent Events) transport
+  - HTTP streamable transport (spec-compliant, MCP Protocol 2025-06-18)
+  - SSE (Server-Sent Events) transport available as backup
   - Automatic tool discovery and registration
   - Type-safe tool definitions
   - Inspector UI for debugging
-  - Used in: `mcp_server.py`, `mcp_infoblox.py`
+  - Used in: `mcp_server_http.py`, `mcp_infoblox_http.py`, `mcp_aws_http.py`, `mcp_aws_cloudcontrol_http.py`
 
 ---
 
@@ -134,31 +135,53 @@ Complete list of all software, libraries, frameworks, and tools used to build th
 ### MCP SDK
 - **mcp 1.2.0+**
   - Official MCP client SDK
-  - SSE transport for server communication
+  - HTTP streamable transport (primary, spec-compliant)
+  - SSE transport (backup)
   - Tool discovery and execution
   - Schema validation
+  - Module: `streamablehttp_client` from `mcp.client.streamable_http`
   - Used in: `agents/mcp_client.py`
 
 ### MCP Servers Built
 
-#### 1. Subnet Calculator MCP Server
-- **File**: `mcp_server.py`
-- **Port**: 3002
-- **Transport**: SSE
-- **Tools**:
+#### 1. Infoblox DDI MCP Server
+- **File**: `mcp_infoblox_http.py` (HTTP), `mcp_infoblox.py` (SSE backup)
+- **Port**: 4001/mcp (HTTP), 3001/sse (SSE backup)
+- **Transport**: HTTP streamable (primary), SSE (backup)
+- **Tools** (98 total):
+  - **IPAM**: list_ip_spaces, list_subnets, create_subnet, list_ip_addresses, reserve_fixed_address, and more
+  - **DNS Data**: list_dns_records, create_a_record, create_cname_record, create_mx_record, create_txt_record, delete_dns_record
+  - **DNS Config**: list_dns_zones, create_dns_zone, list_dns_views
+  - **Federation**: Federated realms, blocks, delegations, overlapping blocks, reserved blocks
+  - **NIOSXaaS (VPN)**: Universal services, endpoints, VPN orchestration
+  - **Atcfw/DFP Security**: Security policies, named lists, category filters
+- **Dependencies**: `services/infoblox_client.py`, `services/niosxaas_client.py`, `services/atcfw_client.py`
+
+#### 2. Subnet Calculator MCP Server
+- **File**: `mcp_server_http.py` (HTTP), `mcp_server.py` (SSE backup)
+- **Port**: 4002/mcp (HTTP), 3002/sse (SSE backup)
+- **Transport**: HTTP streamable (primary), SSE (backup)
+- **Tools** (2 total):
   - `calculate_subnet_info`: Calculate subnet details from CIDR
   - `validate_cidr`: Validate CIDR notation
 - **Dependencies**: `services/subnet_calc.py`
 
-#### 2. Infoblox DDI MCP Server
-- **File**: `mcp_infoblox.py`
-- **Port**: 3001
-- **Transport**: SSE
-- **Tools** (14 total):
-  - **IPAM**: list_ip_spaces, list_subnets, create_subnet, list_ip_addresses, reserve_fixed_address
-  - **DNS Data**: list_dns_records, create_a_record, create_cname_record, create_mx_record, create_txt_record, delete_dns_record
-  - **DNS Config**: list_dns_zones, create_dns_zone, list_dns_views
-- **Dependencies**: `services/infoblox_client.py`
+#### 3. AWS Tools MCP Server
+- **File**: `mcp_aws_http.py` (HTTP), `mcp_aws.py` (SSE backup)
+- **Port**: 4003/mcp (HTTP), 3003/sse (SSE backup)
+- **Transport**: HTTP streamable (primary), SSE (backup)
+- **Tools** (27 total):
+  - VPC, VGW, VPN, Subnets, Security Groups management via boto3
+- **Dependencies**: `boto3`, AWS credentials
+
+#### 4. AWS CloudControl MCP Server
+- **File**: `mcp_aws_cloudcontrol_http.py` (HTTP), `mcp_aws_cloudcontrol.py` (SSE backup)
+- **Port**: 4004/mcp (HTTP), 3004/sse (SSE backup)
+- **Transport**: HTTP streamable (primary), SSE (backup)
+- **Tools** (6 total):
+  - Universal AWS resource management via CloudControl API
+  - create, delete, get, list, update, get_status for 1,100+ AWS resource types
+- **Dependencies**: `boto3`, AWS credentials
 
 ---
 
@@ -253,8 +276,9 @@ streamlit>=1.30.0          # Alternative web UI (app.py)
 ### Communication Protocols
 1. **HTTP REST**: Browser ↔ FastAPI server
 2. **WebSocket**: Real-time chat communication
-3. **SSE (Server-Sent Events)**: MCP client ↔ MCP servers
-4. **In-Process**: Agent ↔ Agent delegation
+3. **HTTP Streamable (MCP 2025-06-18)**: MCP client ↔ MCP servers (primary)
+4. **SSE (Server-Sent Events)**: MCP client ↔ MCP servers (backup)
+5. **In-Process**: Agent ↔ Agent delegation
 
 ### Design Patterns
 - **Singleton Pattern**: MCP client shared across agents
@@ -275,22 +299,32 @@ streamlit>=1.30.0          # Alternative web UI (app.py)
 ```
 subnet_mcp/
 ├── agents/
-│   ├── base_agent.py          # Agent with LLM integration
-│   ├── mcp_client.py          # MCP client (singleton)
-│   └── orchestrator.py        # Multi-agent coordinator
+│   ├── base_agent.py             # Agent with LLM integration
+│   ├── mcp_client.py             # MCP client (singleton) - HTTP transport
+│   └── orchestrator.py           # Multi-agent coordinator
 ├── services/
-│   ├── subnet_calc.py         # Subnet calculation logic
-│   └── infoblox_client.py     # Infoblox API wrapper
+│   ├── subnet_calc.py            # Subnet calculation logic
+│   ├── infoblox_client.py        # Infoblox API wrapper (IPAM/DNS/Federation)
+│   ├── niosxaas_client.py        # Infoblox NIOSXaaS VPN client
+│   └── atcfw_client.py           # Infoblox Atcfw/DFP security client
 ├── static/
-│   └── index.html             # Web UI (HTML/CSS/JS)
-├── mcp_server.py              # Subnet calculator MCP server
-├── mcp_infoblox.py            # Infoblox DDI MCP server
-├── web_server.py              # FastAPI + WebSocket server
-├── mcp_config.json            # System configuration
-├── requirements.txt           # Python dependencies
-├── .env                       # Environment variables (secret)
-├── .env.example               # Environment template
-└── *.md                       # Documentation
+│   └── index.html                # Web UI (HTML/CSS/JS)
+├── frontend-v2/                  # Next.js frontend (Port 3006)
+├── mcp_infoblox_http.py          # Infoblox DDI HTTP MCP (Port 4001)
+├── mcp_server_http.py            # Subnet calculator HTTP MCP (Port 4002)
+├── mcp_aws_http.py               # AWS Tools HTTP MCP (Port 4003)
+├── mcp_aws_cloudcontrol_http.py  # AWS CloudControl HTTP MCP (Port 4004)
+├── mcp_infoblox.py               # Infoblox SSE backup (Port 3001)
+├── mcp_server.py                 # Subnet SSE backup (Port 3002)
+├── mcp_aws.py                    # AWS SSE backup (Port 3003)
+├── mcp_aws_cloudcontrol.py       # CloudControl SSE backup (Port 3004)
+├── web_server.py                 # FastAPI + WebSocket server (Port 8000)
+├── start_http_servers.sh         # Parallel HTTP server launcher
+├── mcp_config.json               # System configuration
+├── requirements.txt              # Python dependencies
+├── .env                          # Environment variables (secret)
+├── .env.example                  # Environment template
+└── *.md                          # Documentation
 ```
 
 ---
@@ -395,13 +429,15 @@ __pycache__/        # Python bytecode excluded
 
 This system is built with modern, production-ready technologies:
 
-**Frontend**: HTML5 + Tailwind CSS + Chart.js + WebSocket + Vanilla JavaScript
+**Frontend**: Next.js 14 + React + TypeScript + shadcn/ui + Tailwind CSS + WebSocket
 **Backend**: Python 3.10+ + FastAPI + Uvicorn + WebSocket
 **AI Layer**: Anthropic Claude + OpenAI + Custom Multi-Agent Framework
-**MCP Layer**: FastMCP + MCP SDK + SSE Transport
-**APIs**: Infoblox BloxOne DDI (IPAM, DNS Data, DNS Config)
-**DevOps**: python-dotenv + requirements.txt + JSON config
+**MCP Layer**: FastMCP + MCP SDK + HTTP Streamable Transport (MCP 2025-06-18)
+**APIs**: Infoblox BloxOne DDI (IPAM, DNS, Federation, NIOSXaaS VPN, Atcfw Security), AWS (boto3)
+**DevOps**: python-dotenv + requirements.txt + JSON config + Parallel server launcher
 
 **Total Stack Complexity**: Medium (well-organized, maintainable)
-**Total Dependencies**: ~20 Python packages + 3 CDN libraries
+**Total Dependencies**: ~25 Python packages + Next.js ecosystem
 **Learning Curve**: Intermediate (requires understanding of async Python, AI agents, MCP protocol)
+**MCP Servers**: 4 HTTP servers (133 tools total) with SSE backup
+**Agents**: 2 pre-configured agents (extensible via configuration)

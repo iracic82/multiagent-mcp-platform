@@ -242,15 +242,22 @@ async def websocket_endpoint(websocket: WebSocket):
 ```
 
 ### 3. Agents → MCP Client → MCP Servers
-**Protocol**: MCP over SSE (Server-Sent Events)
-**Endpoints**:
-- `http://127.0.0.1:3001/sse` (Infoblox DDI - 98 tools)
-- `http://127.0.0.1:3002/sse` (Subnet Calculator - 2 tools)
-- `http://127.0.0.1:3003/sse` (AWS Tools - 20 tools)
-- `http://127.0.0.1:3000/sse` (AWS CloudControl - 2 tools)
-**Total**: 122 tools from 4 MCP servers
+**Protocol**: MCP over HTTP Streamable (MCP 2025-06-18, spec-compliant)
+**Primary Endpoints** (HTTP):
+- `http://127.0.0.1:4001/mcp` (Infoblox DDI - 98 tools)
+- `http://127.0.0.1:4002/mcp` (Subnet Calculator - 2 tools)
+- `http://127.0.0.1:4003/mcp` (AWS Tools - 27 tools)
+- `http://127.0.0.1:4004/mcp` (AWS CloudControl - 6 tools)
 
-**Purpose**: Agents call tools from MCP servers via shared singleton client
+**Backup Endpoints** (SSE):
+- `http://127.0.0.1:3001/sse` (Infoblox DDI backup)
+- `http://127.0.0.1:3002/sse` (Subnet Calculator backup)
+- `http://127.0.0.1:3003/sse` (AWS Tools backup)
+- `http://127.0.0.1:3004/sse` (AWS CloudControl backup)
+
+**Total**: 133 tools from 4 MCP servers
+
+**Purpose**: Agents call tools from MCP servers via shared singleton client using HTTP streamable transport
 
 ```python
 # agents/base_agent.py
@@ -523,48 +530,61 @@ Internet
 
 ```
 subnet_mcp/
-├── web_server.py                 # FastAPI + WebSocket server (Port 8000)
-├── mcp_server.py                 # Subnet Calculator MCP (Port 3002)
-├── mcp_infoblox.py               # Infoblox DDI MCP (Port 3001)
-├── mcp_config.json               # MCP servers and agent configurations
-├── .env                          # API keys (gitignored)
-├── .env.example                  # Template for environment variables
+├── web_server.py                       # FastAPI + WebSocket server (Port 8000)
+├── start_http_servers.sh               # Parallel HTTP server launcher
 │
-├── agents/                       # Multi-agent framework
-│   ├── orchestrator.py           # Agent coordinator (singleton)
-│   ├── base_agent.py             # Agent with Claude/OpenAI + MCP tools
-│   └── mcp_client.py             # MCP client (singleton, SSE connections)
+├── mcp_infoblox_http.py                # Infoblox DDI HTTP MCP (Port 4001)
+├── mcp_server_http.py                  # Subnet Calculator HTTP MCP (Port 4002)
+├── mcp_aws_http.py                     # AWS Tools HTTP MCP (Port 4003)
+├── mcp_aws_cloudcontrol_http.py        # AWS CloudControl HTTP MCP (Port 4004)
 │
-├── services/                     # Business logic layer
-│   ├── subnet_calc.py            # Subnet calculation (Python ipaddress)
-│   └── infoblox_client.py        # Infoblox API client (IPAM, DNS, Federation)
+├── mcp_infoblox.py                     # Infoblox SSE backup (Port 3001)
+├── mcp_server.py                       # Subnet SSE backup (Port 3002)
+├── mcp_aws.py                          # AWS SSE backup (Port 3003)
+├── mcp_aws_cloudcontrol.py             # CloudControl SSE backup (Port 3004)
 │
-├── frontend-v2/                 # Next.js Frontend (Port 3006)
-│   ├── app/                     # Next.js App Router
-│   │   ├── page.tsx            # Main application page
-│   │   ├── layout.tsx          # Root layout with ThemeProvider
-│   │   └── globals.css         # Tailwind + Infoblox theme
-│   ├── components/             # React components
-│   │   ├── sidebar.tsx         # System status sidebar
-│   │   ├── chat.tsx            # Chat interface
-│   │   ├── message.tsx         # Message renderer
-│   │   ├── theme-provider.tsx  # Dark mode provider
-│   │   └── ui/                 # shadcn/ui components
-│   ├── hooks/                  # Custom React hooks
-│   │   └── use-websocket.ts    # WebSocket connection hook
-│   └── lib/                    # Utilities
-│       └── utils.ts            # Helper functions
+├── mcp_config.json                     # MCP servers and agent configurations
+├── .env                                # API keys (gitignored)
+├── .env.example                        # Template for environment variables
+│
+├── agents/                             # Multi-agent framework
+│   ├── orchestrator.py                 # Agent coordinator (singleton)
+│   ├── base_agent.py                   # Agent with Claude/OpenAI + MCP tools
+│   └── mcp_client.py                   # MCP client (singleton, HTTP connections)
+│
+├── services/                           # Business logic layer
+│   ├── subnet_calc.py                  # Subnet calculation (Python ipaddress)
+│   ├── infoblox_client.py              # Infoblox API client (IPAM/DNS/Federation)
+│   ├── niosxaas_client.py              # Infoblox NIOSXaaS VPN client
+│   └── atcfw_client.py                 # Infoblox Atcfw/DFP security client
+│
+├── frontend-v2/                        # Next.js Frontend (Port 3006)
+│   ├── app/                            # Next.js App Router
+│   │   ├── page.tsx                    # Main application page
+│   │   ├── layout.tsx                  # Root layout with ThemeProvider
+│   │   └── globals.css                 # Tailwind + Infoblox theme
+│   ├── components/                     # React components
+│   │   ├── sidebar.tsx                 # System status sidebar
+│   │   ├── chat.tsx                    # Chat interface
+│   │   ├── message.tsx                 # Message renderer
+│   │   ├── theme-provider.tsx          # Dark mode provider
+│   │   └── ui/                         # shadcn/ui components
+│   ├── hooks/                          # Custom React hooks
+│   │   └── use-websocket.ts            # WebSocket connection hook
+│   └── lib/                            # Utilities
+│       └── utils.ts                    # Helper functions
 │
 ├── Documentation/
-│   ├── README.md                 # Project overview and setup
-│   ├── ARCHITECTURE.md           # This file - system architecture
-│   ├── QUICKSTART.md             # 5-minute setup guide
-│   ├── TECHNOLOGY_STACK.md       # Complete tech stack documentation
-│   ├── INFOBLOX_SETUP.md         # Infoblox integration guide
-│   ├── CLAUDE.md                 # Guide for Claude Code AI assistant
-│   └── IPAM_SETUP.md             # Legacy IPAM setup (deprecated)
+│   ├── README.md                       # Project overview and setup
+│   ├── ARCHITECTURE.md                 # This file - system architecture
+│   ├── QUICKSTART.md                   # 5-minute setup guide
+│   ├── TECHNOLOGY_STACK.md             # Complete tech stack documentation
+│   ├── HTTP_MIGRATION_GUIDE.md         # HTTP transport migration documentation
+│   ├── DOCS_UPDATE_SUMMARY.md          # Documentation update summary
+│   ├── INFOBLOX_SETUP.md               # Infoblox integration guide
+│   └── CLAUDE.md                       # Guide for Claude Code AI assistant
 │
-└── requirements.txt              # Python dependencies
+└── requirements.txt                    # Python dependencies
 ```
 
 ## Key Design Decisions
@@ -584,15 +604,16 @@ subnet_mcp/
 - Fully connected mesh topology
 - Each agent can delegate to any other agent
 
-### 4. Why SSE Instead of WebSocket?
-- MCP protocol standard uses SSE
-- Better for server→client streaming
-- Simpler reconnection logic
-- Works through more firewalls/proxies
+### 4. Why HTTP Streamable Instead of SSE?
+- HTTP streamable is the official MCP Protocol 2025-06-18 standard
+- SSE transport is deprecated as of January 2025
+- HTTP streamable provides better spec compliance
+- Supports bidirectional JSON-RPC communication
+- SSE remains available as backup for compatibility
 
 ## Summary
 
-You now have a production-ready multi-agent platform with comprehensive cloud infrastructure management:
+This platform provides a production-ready multi-agent system with comprehensive cloud infrastructure management:
 
 1. **Next.js Frontend** (Port 3006):
    - Next.js 14 + TypeScript + shadcn/ui
@@ -606,7 +627,7 @@ You now have a production-ready multi-agent platform with comprehensive cloud in
 2. **Multi-Agent System**:
    - 2 pre-configured agents (main, network_specialist)
    - Agent-to-agent delegation with `delegate` tool
-   - All agents share access to **122 tools** from 4 MCP servers
+   - All agents share access to **133 tools** from 4 MCP servers
    - Support for Claude and OpenAI LLMs
    - Easy to add custom agents via mcp_config.json
 
@@ -650,9 +671,11 @@ You now have a production-ready multi-agent platform with comprehensive cloud in
    - Security best practices (API keys in .env)
 
 9. **Total Capabilities**:
-   - **50 total tools** from 2 active MCP servers (+ Terraform MCP available)
-   - **2 agents** (extensible)
+   - **133 total tools** from 4 active MCP servers
+   - **2 agents** (extensible via configuration)
    - **6 Infoblox API services** fully integrated
+   - **AWS management** via boto3 (VPC, VPN, CloudControl API)
+   - **HTTP streamable transport** (MCP Protocol 2025-06-18, spec-compliant)
    - **Real-time** WebSocket communication
    - **Automatic** chart generation
    - **End-to-end VPN automation**

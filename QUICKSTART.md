@@ -32,57 +32,96 @@ INFOBLOX_BASE_URL=https://csp.infoblox.com
 
 ## Step 3: Start MCP Servers
 
-Open 2 terminal windows:
+**Option 1: Start All HTTP Servers (Recommended - Spec-Compliant)**
+
+```bash
+./start_http_servers.sh
+```
+
+This launches all 4 HTTP MCP servers in parallel. Expected output:
+```
+Starting HTTP MCP Servers...
+✅ Infoblox DDI HTTP Server (port 4001)
+✅ Subnet Calculator HTTP Server (port 4002)
+✅ AWS Tools HTTP Server (port 4003)
+✅ AWS CloudControl HTTP Server (port 4004)
+
+All servers started. Press Ctrl+C to stop all servers.
+```
+
+**Option 2: Start Servers Individually**
+
+Open 4 terminal windows:
 
 **Terminal 1 - Infoblox MCP Server:**
 ```bash
 source venv/bin/activate
-python mcp_infoblox.py
+python mcp_infoblox_http.py  # Port 4001/mcp (HTTP)
+# or: python mcp_infoblox.py  # Port 3001/sse (SSE backup)
 ```
 
 **Terminal 2 - Subnet Calculator MCP Server:**
 ```bash
 source venv/bin/activate
-python mcp_server.py
+python mcp_server_http.py     # Port 4002/mcp (HTTP)
+# or: python mcp_server.py     # Port 3002/sse (SSE backup)
 ```
 
-You should see:
+**Terminal 3 - AWS Tools MCP Server:**
+```bash
+source venv/bin/activate
+python mcp_aws_http.py         # Port 4003/mcp (HTTP)
+# or: python mcp_aws.py         # Port 3003/sse (SSE backup)
 ```
-Infoblox BloxOne DDI: SSE server running on http://127.0.0.1:3001/sse
-Subnet Calculator: SSE server running on http://127.0.0.1:3002/sse
+
+**Terminal 4 - AWS CloudControl MCP Server:**
+```bash
+source venv/bin/activate
+python mcp_aws_cloudcontrol_http.py  # Port 4004/mcp (HTTP)
+# or: python mcp_aws_cloudcontrol.py  # Port 3004/sse (SSE backup)
+```
+
+Expected output for HTTP servers:
+```
+Infoblox BloxOne DDI: HTTP server running on http://127.0.0.1:4001/mcp
+Subnet Calculator: HTTP server running on http://127.0.0.1:4002/mcp
+AWS Tools: HTTP server running on http://127.0.0.1:4003/mcp
+AWS CloudControl: HTTP server running on http://127.0.0.1:4004/mcp
 ```
 
 ## Step 4: Start Web Server
 
-**Terminal 3 - Web Server:**
+**New Terminal - Web Server:**
 ```bash
 source venv/bin/activate
 python web_server.py
 ```
 
-You should see:
+Expected output:
 ```
 🚀 Starting Multi-Agent System...
-✓ Connected to MCP server: subnet-calculator (http://127.0.0.1:3002/sse)
-  Available tools: 2
-✓ Connected to MCP server: infoblox-ddi (http://127.0.0.1:3001/sse)
-  Available tools: 48
+✅ Connected to infoblox-ddi via HTTP (spec-compliant) - 98 tools
+✅ Connected to subnet-calculator via HTTP (spec-compliant) - 2 tools
+✅ Connected to aws-tools via HTTP (spec-compliant) - 27 tools
+✅ Connected to aws-cloudcontrol via HTTP (spec-compliant) - 6 tools
 ✓ Created agent: main (claude)
 ✓ Created agent: network_specialist (claude)
 ✅ System initialized successfully!
 INFO:     Uvicorn running on http://0.0.0.0:8000
 ```
 
+Note: The system connects to HTTP servers (ports 4001-4004) by default. If HTTP servers are not available, it falls back to SSE servers (ports 3001-3004).
+
 ## Step 5: Open Browser
 
 Navigate to: **http://localhost:8000**
 
-You should see:
+The interface displays:
 - Purple gradient sidebar with system status
 - Chat interface in the center
 - Agent selector dropdown
-- MCP server count: 2
-- Total tools: 50
+- MCP server count: 4
+- Total tools: 133
 
 ## Step 6: Start Chatting!
 
@@ -141,15 +180,15 @@ List all my DNS zones
 ### Agent Features
 - ✅ **Agent switching** - Toggle between main and network_specialist
 - ✅ **Multi-agent delegation** - Agents collaborate automatically
-- ✅ **Tool access** - 50 tools from 2 MCP servers (+ Terraform MCP)
+- ✅ **Tool access** - 133 tools from 4 MCP servers
 
 ## System Status Dashboard
 
-The sidebar shows:
-- **MCP Servers**: Should show "2"
-- **Agents**: Should show "2"
-- **Tools**: Should show "50"
-- **Status**: Should show green dot and "Online"
+The sidebar displays:
+- **MCP Servers**: Shows "4" (Infoblox DDI, Subnet Calc, AWS Tools, AWS CloudControl)
+- **Agents**: Shows "2" (main, network_specialist)
+- **Tools**: Shows "133" (98 Infoblox + 2 Subnet + 27 AWS + 6 CloudControl)
+- **Status**: Green dot indicates "Online"
 
 ## Chart Generation
 
@@ -171,8 +210,8 @@ No manual action needed - it's automatic!
 - Check browser console for errors
 
 ### "0 MCP Servers, 0 Tools"
-- Ensure both MCP servers are running
-- Check they're on ports 3001 and 3002
+- Ensure all HTTP MCP servers are running (run `./start_http_servers.sh`)
+- Check servers are on ports 4001-4004 (HTTP) or 3001-3004 (SSE backup)
 - Restart web_server.py to reconnect
 
 ### "API key not found"
@@ -183,7 +222,7 @@ No manual action needed - it's automatic!
 ### "Infoblox client not initialized"
 - Check `INFOBLOX_API_KEY` in `.env`
 - Verify API key is valid
-- Restart `mcp_infoblox.py`
+- Restart `mcp_infoblox_http.py` (or `mcp_infoblox.py` for SSE)
 
 ### Charts not showing
 - Ensure query returns table format
@@ -232,8 +271,10 @@ async def main():
 
     await orch.initialize(
         mcp_servers=[
-            {"name": "subnet-calculator", "url": "http://127.0.0.1:3002/sse"},
-            {"name": "infoblox-ddi", "url": "http://127.0.0.1:3001/sse"}
+            {"name": "infoblox-ddi", "url": "http://127.0.0.1:4001/mcp"},
+            {"name": "subnet-calculator", "url": "http://127.0.0.1:4002/mcp"},
+            {"name": "aws-tools", "url": "http://127.0.0.1:4003/mcp"},
+            {"name": "aws-cloudcontrol", "url": "http://127.0.0.1:4004/mcp"}
         ],
         agent_configs=[
             {"name": "main", "llm_provider": "claude"}
@@ -251,10 +292,16 @@ asyncio.run(main())
 ## Quick Commands Reference
 
 ```bash
-# Start everything
-python mcp_infoblox.py     # Terminal 1
-python mcp_server.py        # Terminal 2
-python web_server.py        # Terminal 3
+# Start everything (recommended)
+./start_http_servers.sh     # Starts all 4 HTTP MCP servers
+python web_server.py        # In a new terminal
+
+# Or start individually
+python mcp_infoblox_http.py           # Terminal 1 (HTTP)
+python mcp_server_http.py             # Terminal 2 (HTTP)
+python mcp_aws_http.py                # Terminal 3 (HTTP)
+python mcp_aws_cloudcontrol_http.py   # Terminal 4 (HTTP)
+python web_server.py                  # Terminal 5
 
 # Then open: http://localhost:8000
 
@@ -283,16 +330,17 @@ Explore the codebase:
 
 ## Pro Tips
 
-1. **Keep terminals open** - You need all 3 running
+1. **Use parallel launcher** - `./start_http_servers.sh` starts all 4 servers at once
 2. **Check system status** - Sidebar shows connection health
 3. **Try complex queries** - Agent handles multi-step workflows
 4. **Ask for tables** - Triggers automatic chart generation
-5. **Switch agents** - network_specialist for Infoblox tasks
+5. **Switch agents** - network_specialist for Infoblox/networking tasks
 6. **Tool calls visible** - Expand to see API details
+7. **HTTP is primary** - Spec-compliant transport with SSE backup available
 
 Happy building! 🎉
 
 ---
 
 **Estimated time to first query: 5 minutes**
-**Features unlocked: Real-time chat, auto-charts, markdown, 50 tools, 2 agents, VPN automation, DNS security**
+**Features unlocked: Real-time chat, auto-charts, markdown, 133 tools, 4 MCP servers, 2 agents, VPN automation, DNS security, AWS management**
