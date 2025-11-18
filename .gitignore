@@ -1,5 +1,19 @@
-# Environment variables - NEVER COMMIT!
+# ===========================
+# SECRETS - NEVER COMMIT!
+# ===========================
 .env
+.env.local
+.env.*.local
+*.key
+*.pem
+*.crt
+*credentials*
+secrets/
+config/secrets/
+
+# AWS Credentials
+.aws/credentials
+.aws/config
 
 # Python
 __pycache__/
@@ -51,3 +65,28 @@ htmlcov/
 # Node modules (for MCP servers)
 node_modules/
 package-lock.json
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+temp/
+tmp/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Documentation builds
+docs/_build/
+site/
+
+# OS-specific
+Thumbs.db
+.DS_Store
+
+# Monitoring data
+prometheus_data/
+grafana_data/
+jaeger_data/
