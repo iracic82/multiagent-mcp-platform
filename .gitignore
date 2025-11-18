@@ -90,3 +90,16 @@ Thumbs.db
 prometheus_data/
 grafana_data/
 jaeger_data/
+
+# Test files (keep only production feature tests)
+test_*.py
+!test_caching.py
+!test_circuit_breaker.py
+!test_metrics.py
+!test_tracing.py
+
+# Internal planning documents
+GEMINI.md
+INFOBLOX_MCP_ASSESSMENT.md
+MEMORY_INTEGRATION_PLAN.md
+get_location_id.py
