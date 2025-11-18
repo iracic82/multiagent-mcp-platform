@@ -115,4 +115,7 @@ examples/
 GEMINI.md
 INFOBLOX_MCP_ASSESSMENT.md
 MEMORY_INTEGRATION_PLAN.md
+CLAUDE.md
 get_location_id.py
+*.txt
+!requirements.txt
