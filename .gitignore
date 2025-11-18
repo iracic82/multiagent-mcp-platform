@@ -119,3 +119,6 @@ CLAUDE.md
 get_location_id.py
 *.txt
 !requirements.txt
+
+# Claude Code settings
+.claude/
